@@ -1,0 +1,63 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: todo
+      POSTGRES_USER: todo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run python3 scripts/init_env.py first}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U todo -d todo']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  migrate:
+    image: ${TODO_IMAGE:-bronze-todo-onprem:local}
+    pull_policy: never
+    command: [python, -m, app.migrate]
+    environment:
+      DATABASE_URL: postgresql+psycopg://todo:${POSTGRES_PASSWORD:?Run init_env.py}@db:5432/todo
+    depends_on:
+      db:
+        condition: service_healthy
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 0.5
+    restart: 'no'
+
+  web:
+    image: ${TODO_IMAGE:-bronze-todo-onprem:local}
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://todo:${POSTGRES_PASSWORD:?Run init_env.py}@db:5432/todo
+      SECRET_KEY: ${SECRET_KEY:?Run python3 scripts/init_env.py first}
+      LOG_LEVEL: INFO
+      PORT: '8080'
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - '127.0.0.1:${HOST_PORT:-8080}:8080'
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 0.5
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
