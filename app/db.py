@@ -1,10 +1,9 @@
-import os
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, String, create_engine, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
-engine = create_engine(os.environ['DATABASE_URL'].replace('postgresql://', 'postgresql+psycopg://', 1), connect_args={})
+engine = create_engine("sqlite:///./todo.db", connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine)
 
 

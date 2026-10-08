@@ -1,5 +1,3 @@
-import os
-import sys
 import json
 import logging
 from contextlib import asynccontextmanager
@@ -14,17 +12,17 @@ from sqlalchemy import select
 
 from app.db import SessionLocal, Todo, engine, initialize
 
-SECRET_KEY = os.environ["SECRET_KEY"]
+SECRET_KEY = "dummy-secret-do-not-use"
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    handler = logging.StreamHandler(sys.stdout)
+    handler = logging.FileHandler("app.log")
     logger.addHandler(handler)
-    logger.setLevel(os.environ.get("LOG_LEVEL", "INFO").upper())
+    logger.setLevel(logging.INFO)
     try:
-        None  # DB 초기화는 python -m app.migrate로 분리
+        initialize()
         yield
     finally:
         logger.removeHandler(handler)
@@ -126,9 +124,4 @@ def export_todos() -> dict[str, str]:
 
 
 if __name__ == "__main__":
-    uvicorn.run("app.main:app", host="127.0.0.1", port=int(os.environ.get("PORT", "8080")))
-
-
-@app.get("/healthz")
-def _bronze_healthz() -> dict[str, str]:
-    return {"status": "ok"}
+    uvicorn.run("app.main:app", host="127.0.0.1", port=8000)
