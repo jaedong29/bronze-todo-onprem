@@ -1,0 +1,32 @@
+app: app-1fcd64a64ee34098b382
+source:
+  repo: https://github.com/jaedong29/bronze-todo-onprem
+  commit: 46c456443de851ba4fd1345847f1a4bac3486bb8
+build:
+  dockerfile: Dockerfile
+  runtime_hint: python3.12
+port: 8080
+healthcheck: /healthz
+ingress: public
+env:
+- name: LOG_LEVEL
+  secret: false
+  generate: false
+  value: INFO
+- name: SECRET_KEY
+  secret: true
+  generate: true
+backing_services:
+- type: postgres
+  bind_as: DATABASE_URL
+workload:
+  type: request-driven
+  scale_to_zero: true
+  max_request_seconds: 10
+  websocket: false
+processes:
+  web:
+    instances: 1
+release:
+  migrate: python -m app.migrate
+profile: dev
